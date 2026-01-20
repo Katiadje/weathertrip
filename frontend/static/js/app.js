@@ -1,5 +1,6 @@
-// Configuration de l'API
-const API_URL = 'http://localhost:8000';
+// Configuration de l'API (auto : local ou AWS)
+const API_URL = `${window.location.protocol}//${window.location.host}`;
+
 
 // État de l'application
 let currentUser = null;
