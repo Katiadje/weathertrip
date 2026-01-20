@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WeatherTrip - Gestion de voyages avec météo</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+
+        <!-- Header -->
+        <header>
+            <div class="globe-container">
+                <div class="globe">🌍</div>
+                <div class="orbit"></div>
+            </div>
+            <h1>WeatherTrip</h1>
+            <p class="subtitle">Planifiez vos voyages avec la météo</p>
+            <div id="user-info" class="hidden">
+                <span id="username-display"></span>
+                <button onclick="logout()" class="btn btn-secondary">Déconnexion</button>
+            </div>
+        </header>
+
+
+
+
+
+        <!-- Section Authentification -->
+        <div id="auth-section" class="card">
+            <h2>Connexion / Inscription</h2>
+            <div class="tabs">
+                <button class="tab-btn active" onclick="showTab('login')">Connexion</button>
+                <button class="tab-btn" onclick="showTab('register')">Inscription</button>
+            </div>
+
+            <!-- Formulaire de connexion -->
+            <div id="login-tab" class="tab-content active">
+                <form id="login-form">
+                    <div class="form-group">
+                        <label>Nom d'utilisateur</label>
+                        <input type="text" id="login-username" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Mot de passe</label>
+                        <input type="password" id="login-password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Se connecter</button>
+                </form>
+            </div>
+
+            <!-- Formulaire d'inscription -->
+            <div id="register-tab" class="tab-content">
+                <form id="register-form">
+                    <div class="form-group">
+                        <label>Nom d'utilisateur</label>
+                        <input type="text" id="register-username" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="register-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Mot de passe</label>
+                        <input type="password" id="register-password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">S'inscrire</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Section Principale (visible après connexion) -->
+        <div id="main-section" class="hidden">
+            <!-- Création de voyage -->
+            <div class="card">
+                <h2>Créer un nouveau voyage</h2>
+                <form id="trip-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Nom du voyage</label>
+                            <input type="text" id="trip-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Date de début</label>
+                            <input type="date" id="trip-start">
+                        </div>
+                        <div class="form-group">
+                            <label>Date de fin</label>
+                            <input type="date" id="trip-end">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea id="trip-description" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Créer le voyage</button>
+                </form>
+            </div>
+
+            <!-- Liste des voyages -->
+            <div class="card">
+                <h2>Mes voyages</h2>
+                <div id="trips-list"></div>
+            </div>
+
+            <!-- Statistiques -->
+            <div class="card">
+                <h2>Statistiques</h2>
+                <canvas id="trips-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Modal pour ajouter une destination -->
+        <div id="destination-modal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeDestinationModal()">&times;</span>
+                <h2>Ajouter une destination</h2>
+                <form id="destination-form">
+                    <input type="hidden" id="modal-trip-id">
+                    <div class="form-group">
+                        <label>Ville</label>
+                        <input type="text" id="destination-city" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Pays</label>
+                        <input type="text" id="destination-country" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Date d'arrivée</label>
+                            <input type="date" id="destination-arrival">
+                        </div>
+                        <div class="form-group">
+                            <label>Date de départ</label>
+                            <input type="date" id="destination-departure">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Ajouter</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal pour afficher la météo -->
+        <div id="weather-modal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeWeatherModal()">&times;</span>
+                <h2>Météo de la destination</h2>
+                <div id="weather-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

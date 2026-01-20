@@ -1,0 +1,10 @@
+USERS: id_user, username, email, password_hash, created_at
+POSSEDE, 0N USERS, 11 TRIPS
+
+TRIPS: id_trip, name, description, start_date, end_date, created_at, updated_at
+CONTIENT, 0N TRIPS, 11 DESTINATIONS
+
+DESTINATIONS: id_destination, city, country, arrival_date, departure_date, latitude, longitude, created_at
+A_METEO, 0N DESTINATIONS, 11 WEATHER_DATA
+
+WEATHER_DATA: id_weather, temperature, feels_like, temp_min, temp_max, humidity, weather_main, weather_description, icon, wind_speed, clouds, forecast_date, fetched_at

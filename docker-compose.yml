@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # Base de données PostgreSQL
+  db:
+    image: postgres:15-alpine
+    container_name: weathertrip_db
+    environment:
+      POSTGRES_USER: weathertrip_user
+      POSTGRES_PASSWORD: weathertrip_pass
+      POSTGRES_DB: weathertrip_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docs/init_database.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U weathertrip_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend FastAPI
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: weathertrip_backend
+    environment:
+      DATABASE_URL: postgresql://weathertrip_user:weathertrip_pass@db:5432/weathertrip_db
+      OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY}
+      SECRET_KEY: ${SECRET_KEY:-super_secret_key_change_in_production}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./frontend:/frontend
+    depends_on:
+      db:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  postgres_data:
+
+networks:
+  default:
+    name: weathertrip_network

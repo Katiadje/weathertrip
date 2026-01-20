@@ -1,0 +1,73 @@
+// WeatherTrip - Schéma de base de données
+// À utiliser sur https://dbdiagram.io/
+
+Table users {
+  id integer [primary key, increment]
+  username varchar(100) [unique, not null]
+  email varchar(255) [unique, not null]
+  password_hash varchar(255) [not null]
+  created_at timestamp [default: `now()`]
+  
+  indexes {
+    username
+    email
+  }
+}
+
+Table trips {
+  id integer [primary key, increment]
+  name varchar(200) [not null]
+  description text
+  start_date timestamp
+  end_date timestamp
+  user_id integer [not null, ref: > users.id]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+  
+  indexes {
+    user_id
+  }
+}
+
+Table destinations {
+  id integer [primary key, increment]
+  city varchar(200) [not null]
+  country varchar(100) [not null]
+  arrival_date timestamp
+  departure_date timestamp
+  latitude float
+  longitude float
+  trip_id integer [not null, ref: > trips.id]
+  created_at timestamp [default: `now()`]
+  
+  indexes {
+    trip_id
+  }
+}
+
+Table weather_data {
+  id integer [primary key, increment]
+  destination_id integer [not null, ref: > destinations.id]
+  temperature float
+  feels_like float
+  temp_min float
+  temp_max float
+  humidity integer
+  weather_main varchar(100)
+  weather_description varchar(255)
+  icon varchar(10)
+  wind_speed float
+  clouds integer
+  forecast_date timestamp
+  fetched_at timestamp [default: `now()`]
+  
+  indexes {
+    destination_id
+    fetched_at
+  }
+}
+
+// Relations
+// users 1--* trips : "possède"
+// trips 1--* destinations : "contient"
+// destinations 1--* weather_data : "a des données météo"
