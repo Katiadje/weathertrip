@@ -110,7 +110,8 @@ class DestinationBase(BaseModel):
         return self
 
 class DestinationCreate(DestinationBase):
-    pass
+    # ✅ FIX: nécessaire pour créer une destination via API/tests
+    trip_id: int = Field(..., ge=1, description="ID du voyage")
 
 class DestinationUpdate(BaseModel):
     city: Optional[str] = Field(None, min_length=2, max_length=100)
@@ -247,7 +248,6 @@ class WeatherData(WeatherDataBase):
     class Config:
         from_attributes = True
 
-# Response schemas
 class WeatherResponse(BaseModel):
     destination: Destination
     current_weather: Optional[WeatherData] = None

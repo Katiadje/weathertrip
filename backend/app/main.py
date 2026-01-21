@@ -3,11 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import os
+import time
+from sqlalchemy import text
 
 from .database.database import engine, Base
 from .routes import users, trips, destinations, weather
 
-# 🔐 Import des middlewares de sécurité
 from .middleware import (
     setup_csrf_protection,
     setup_rate_limiting,
@@ -16,77 +17,82 @@ from .middleware import (
 )
 from .middleware.auth import setup_brute_force_protection
 
-# Créer les tables
-Base.metadata.create_all(bind=engine)
 
-# Créer l'application FastAPI
 app = FastAPI(
     title="WeatherTrip API",
     description="API de gestion de voyages avec intégration météo - Version Sécurisée",
     version="2.0.0"
 )
 
-# 🔐 SÉCURITÉ : Configuration CORS restrictive
+# CORS
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,  # ⚠️ Plus de "*" !
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
-    allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],  # Ajout X-CSRF-Token
+    allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],
     max_age=600,
 )
 
-# 🔐 SÉCURITÉ : Headers de sécurité HTTP
+# Security
 environment = os.getenv("ENVIRONMENT", "development")
 setup_security_headers(app, environment=environment)
 
-# 🔐 SÉCURITÉ : Protection CSRF
-secret_key = os.getenv("SECRET_KEY", "super_secret_key_change_in_production")
+secret_key = os.getenv("SECRET_KEY", "change-me")
 setup_csrf_protection(app, secret_key=secret_key)
 
-# 🔐 SÉCURITÉ : Rate Limiting
 setup_rate_limiting(app)
-
-# 🔐 SÉCURITÉ : Protection anti-brute force
 setup_brute_force_protection(app, login_endpoints=["/users/login"])
 
-# Inclure les routes
+# Routes
 app.include_router(users.router)
 app.include_router(trips.router)
 app.include_router(destinations.router)
 app.include_router(weather.router)
 
-# Servir les fichiers statiques (frontend)
-frontend_path = os.path.join(os.path.dirname(__file__), "..", "..", "frontend")
-if os.path.exists(frontend_path):
-    static_path = os.path.join(frontend_path, "static")
-    if os.path.exists(static_path):
-        app.mount("/static", StaticFiles(directory=static_path), name="static")
+# FRONT (force Docker path)
+FRONTEND_DIR = os.getenv("FRONTEND_DIR", "/app/frontend")
+STATIC_DIR = os.path.join(FRONTEND_DIR, "static")
+INDEX_FILE = os.path.join(FRONTEND_DIR, "templates", "index.html")
 
-@app.get("/")
+if os.path.exists(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+def wait_for_db_and_init(max_wait_seconds: int = 60):
+    deadline = time.time() + max_wait_seconds
+    last_error = None
+    while time.time() < deadline:
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            Base.metadata.create_all(bind=engine)
+            print("✅ DB ready + tables initialized")
+            return
+        except Exception as e:
+            last_error = e
+            print(f"⏳ Waiting for DB... ({e})")
+            time.sleep(2)
+    raise RuntimeError(f"DB not ready after {max_wait_seconds}s: {last_error}")
+
+
+@app.on_event("startup")
+def on_startup():
+    wait_for_db_and_init(60)
+    print(f"✅ FRONTEND_DIR={FRONTEND_DIR}")
+    print(f"✅ INDEX_FILE={INDEX_FILE}")
+    print(f"✅ index exists={os.path.exists(INDEX_FILE)}")
+
+
+@app.get("/", include_in_schema=False)
 async def root():
-    """Page d'accueil - servir le frontend"""
-    frontend_index = os.path.join(frontend_path, "templates", "index.html")
-    if os.path.exists(frontend_index):
-        return FileResponse(frontend_index)
-    return {
-        "message": "Bienvenue sur WeatherTrip API - Version Sécurisée",
-        "version": "2.0.0",
-        "docs": "/docs"
-    }
+    if os.path.exists(INDEX_FILE):
+        return FileResponse(INDEX_FILE)
+    return {"error": "Frontend not found", "index_file": INDEX_FILE, "exists": os.path.exists(INDEX_FILE)}
 
-@app.get("/health")
+
+@app.get("/health", include_in_schema=False)
 @limiter.limit("60/minute")
 async def health_check(request: Request):
-    """Endpoint de santé"""
-    return {
-        "status": "healthy",
-        "message": "WeatherTrip API is running",
-        "version": "2.0.0",
-        "security": "enabled"
-    }
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    return {"status": "ok"}
