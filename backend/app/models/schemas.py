@@ -1,18 +1,76 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from datetime import datetime
 from typing import Optional, List
+import re
 
-# User Schemas
+# ==================== VALIDATORS CUSTOM ====================
+
+def validate_not_empty(v: str, field_name: str) -> str:
+    """Valide qu'une chaîne n'est pas vide ou composée uniquement d'espaces"""
+    if not v or not v.strip():
+        raise ValueError(f"{field_name} ne peut pas être vide ou composé uniquement d'espaces")
+    return v.strip()
+
+def validate_no_sql_injection(v: str) -> str:
+    """Détecte les tentatives d'injection SQL basiques"""
+    dangerous_patterns = [
+        r"(\bOR\b|\bAND\b).*=.*",
+        r"(--|#|/\*|\*/)",
+        r"(\bDROP\b|\bDELETE\b|\bINSERT\b|\bUPDATE\b)",
+        r"(UNION.*SELECT|SELECT.*FROM)"
+    ]
+    for pattern in dangerous_patterns:
+        if re.search(pattern, v, re.IGNORECASE):
+            raise ValueError("Contenu suspect détecté")
+    return v
+
+# ==================== USER SCHEMAS ====================
+
 class UserBase(BaseModel):
-    username: str
-    email: EmailStr
+    username: str = Field(..., min_length=3, max_length=50, description="Nom d'utilisateur")
+    email: EmailStr = Field(..., description="Email valide")
+    
+    @field_validator('username')
+    @classmethod
+    def username_validator(cls, v):
+        v = validate_not_empty(v, "Username")
+        v = validate_no_sql_injection(v)
+        
+        # Uniquement alphanumériques, underscores, tirets
+        if not re.match(r'^[a-zA-Z0-9_-]+$', v):
+            raise ValueError("Le username ne peut contenir que des lettres, chiffres, _ et -")
+        
+        return v
 
 class UserCreate(UserBase):
-    password: str
+    password: str = Field(..., min_length=8, max_length=100, description="Mot de passe sécurisé")
+    
+    @field_validator('password')
+    @classmethod
+    def password_validator(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Le mot de passe ne peut pas être vide")
+        
+        # Au moins 1 majuscule, 1 minuscule, 1 chiffre
+        if not re.search(r'[A-Z]', v):
+            raise ValueError("Le mot de passe doit contenir au moins une majuscule")
+        if not re.search(r'[a-z]', v):
+            raise ValueError("Le mot de passe doit contenir au moins une minuscule")
+        if not re.search(r'\d', v):
+            raise ValueError("Le mot de passe doit contenir au moins un chiffre")
+        
+        return v
 
 class UserLogin(BaseModel):
-    username: str
-    password: str
+    username: str = Field(..., min_length=1, max_length=50)
+    password: str = Field(..., min_length=1, max_length=100)
+    
+    @field_validator('username', 'password')
+    @classmethod
+    def not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Ce champ ne peut pas être vide")
+        return v.strip()
 
 class User(UserBase):
     id: int
@@ -21,25 +79,48 @@ class User(UserBase):
     class Config:
         from_attributes = True
 
-# Destination Schemas
+# ==================== DESTINATION SCHEMAS ====================
+
 class DestinationBase(BaseModel):
-    city: str
-    country: str
+    city: str = Field(..., min_length=2, max_length=100, description="Nom de la ville")
+    country: str = Field(..., min_length=2, max_length=100, description="Nom du pays")
     arrival_date: Optional[datetime] = None
     departure_date: Optional[datetime] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
+    latitude: Optional[float] = Field(None, ge=-90, le=90)
+    longitude: Optional[float] = Field(None, ge=-180, le=180)
+    
+    @field_validator('city', 'country')
+    @classmethod
+    def validate_location(cls, v, info):
+        v = validate_not_empty(v, info.field_name.capitalize())
+        v = validate_no_sql_injection(v)
+        
+        # Uniquement lettres, espaces, tirets, apostrophes
+        if not re.match(r"^[a-zA-ZÀ-ÿ\s'-]+$", v):
+            raise ValueError(f"{info.field_name.capitalize()} contient des caractères invalides")
+        
+        return v
 
 class DestinationCreate(DestinationBase):
     pass
 
 class DestinationUpdate(BaseModel):
-    city: Optional[str] = None
-    country: Optional[str] = None
+    city: Optional[str] = Field(None, min_length=2, max_length=100)
+    country: Optional[str] = Field(None, min_length=2, max_length=100)
     arrival_date: Optional[datetime] = None
     departure_date: Optional[datetime] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
+    latitude: Optional[float] = Field(None, ge=-90, le=90)
+    longitude: Optional[float] = Field(None, ge=-180, le=180)
+    
+    @field_validator('city', 'country')
+    @classmethod
+    def validate_location_update(cls, v, info):
+        if v is not None:
+            v = validate_not_empty(v, info.field_name.capitalize())
+            v = validate_no_sql_injection(v)
+            if not re.match(r"^[a-zA-ZÀ-ÿ\s'-]+$", v):
+                raise ValueError(f"{info.field_name.capitalize()} contient des caractères invalides")
+        return v
 
 class Destination(DestinationBase):
     id: int
@@ -49,21 +130,57 @@ class Destination(DestinationBase):
     class Config:
         from_attributes = True
 
-# Trip Schemas
+# ==================== TRIP SCHEMAS ====================
+
 class TripBase(BaseModel):
-    name: str
-    description: Optional[str] = None
+    name: str = Field(..., min_length=3, max_length=200, description="Nom du voyage")
+    description: Optional[str] = Field(None, max_length=2000, description="Description")
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
+    
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v):
+        v = validate_not_empty(v, "Nom du voyage")
+        v = validate_no_sql_injection(v)
+        return v
+    
+    @field_validator('description')
+    @classmethod
+    def validate_description(cls, v):
+        if v is not None:
+            v = v.strip()
+            if not v:  # Si vide après strip, retourner None
+                return None
+            v = validate_no_sql_injection(v)
+        return v
 
 class TripCreate(TripBase):
     pass
 
 class TripUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
+    name: Optional[str] = Field(None, min_length=3, max_length=200)
+    description: Optional[str] = Field(None, max_length=2000)
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
+    
+    @field_validator('name')
+    @classmethod
+    def validate_name_update(cls, v):
+        if v is not None:
+            v = validate_not_empty(v, "Nom du voyage")
+            v = validate_no_sql_injection(v)
+        return v
+    
+    @field_validator('description')
+    @classmethod
+    def validate_description_update(cls, v):
+        if v is not None:
+            v = v.strip()
+            if not v:
+                return None
+            v = validate_no_sql_injection(v)
+        return v
 
 class Trip(TripBase):
     id: int
@@ -75,18 +192,19 @@ class Trip(TripBase):
     class Config:
         from_attributes = True
 
-# Weather Schemas
+# ==================== WEATHER SCHEMAS ====================
+
 class WeatherDataBase(BaseModel):
     temperature: Optional[float] = None
     feels_like: Optional[float] = None
     temp_min: Optional[float] = None
     temp_max: Optional[float] = None
-    humidity: Optional[int] = None
+    humidity: Optional[int] = Field(None, ge=0, le=100)
     weather_main: Optional[str] = None
     weather_description: Optional[str] = None
     icon: Optional[str] = None
-    wind_speed: Optional[float] = None
-    clouds: Optional[int] = None
+    wind_speed: Optional[float] = Field(None, ge=0)
+    clouds: Optional[int] = Field(None, ge=0, le=100)
     forecast_date: Optional[datetime] = None
 
 class WeatherData(WeatherDataBase):

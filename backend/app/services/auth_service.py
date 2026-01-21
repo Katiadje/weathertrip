@@ -1,14 +1,23 @@
-from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
+from passlib.context import CryptContext
 from sqlalchemy.orm import Session
+from dotenv import load_dotenv
+import os
 from ..models import models
 
-# Configuration
-SECRET_KEY = "votre_cle_secrete_super_securisee_a_changer"  # À changer en production !
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+# Charger les variables d'environnement
+load_dotenv()
+
+# Configuration depuis .env
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+
+# Vérification de sécurité
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY n'est pas défini dans le fichier .env")
 
 # Context pour le hashing des mots de passe
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -27,8 +36,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
-    
+        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -51,6 +59,5 @@ def get_current_user_from_token(token: str, db: Session):
             return None
     except JWTError:
         return None
-    
     user = db.query(models.User).filter(models.User.username == username).first()
     return user
