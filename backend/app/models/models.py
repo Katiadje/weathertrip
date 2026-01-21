@@ -34,9 +34,11 @@ class Trip(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Contraintes de sécurité
+    # Contraintes de sécurité et validation des dates
     __table_args__ = (
         CheckConstraint("LENGTH(TRIM(name)) >= 3", name="check_trip_name_not_empty"),
+        CheckConstraint("end_date IS NULL OR start_date IS NULL OR end_date > start_date", 
+                       name="check_trip_end_after_start"),
     )
     
     # Relations
@@ -56,12 +58,14 @@ class Destination(Base):
     trip_id = Column(Integer, ForeignKey("trips.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     
-    # Contraintes de sécurité
+    # Contraintes de sécurité et validation des dates
     __table_args__ = (
         CheckConstraint("LENGTH(TRIM(city)) >= 2", name="check_city_not_empty"),
         CheckConstraint("LENGTH(TRIM(country)) >= 2", name="check_country_not_empty"),
         CheckConstraint("latitude >= -90 AND latitude <= 90", name="check_latitude_range"),
         CheckConstraint("longitude >= -180 AND longitude <= 180", name="check_longitude_range"),
+        CheckConstraint("departure_date IS NULL OR arrival_date IS NULL OR departure_date > arrival_date", 
+                       name="check_departure_after_arrival"),
     )
     
     # Relations

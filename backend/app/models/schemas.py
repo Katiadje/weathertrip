@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 from datetime import datetime
 from typing import Optional, List
 import re
@@ -100,6 +100,14 @@ class DestinationBase(BaseModel):
             raise ValueError(f"{info.field_name.capitalize()} contient des caractères invalides")
         
         return v
+    
+    @model_validator(mode='after')
+    def validate_dates(self):
+        """Vérifie que la date de départ est après la date d'arrivée"""
+        if self.arrival_date and self.departure_date:
+            if self.departure_date <= self.arrival_date:
+                raise ValueError("La date de départ doit être supérieure à la date d'arrivée")
+        return self
 
 class DestinationCreate(DestinationBase):
     pass
@@ -121,6 +129,14 @@ class DestinationUpdate(BaseModel):
             if not re.match(r"^[a-zA-ZÀ-ÿ\s'-]+$", v):
                 raise ValueError(f"{info.field_name.capitalize()} contient des caractères invalides")
         return v
+    
+    @model_validator(mode='after')
+    def validate_dates(self):
+        """Vérifie que la date de départ est après la date d'arrivée"""
+        if self.arrival_date and self.departure_date:
+            if self.departure_date <= self.arrival_date:
+                raise ValueError("La date de départ doit être supérieure à la date d'arrivée")
+        return self
 
 class Destination(DestinationBase):
     id: int
@@ -154,6 +170,14 @@ class TripBase(BaseModel):
                 return None
             v = validate_no_sql_injection(v)
         return v
+    
+    @model_validator(mode='after')
+    def validate_dates(self):
+        """Vérifie que la date de fin est après la date de début"""
+        if self.start_date and self.end_date:
+            if self.end_date <= self.start_date:
+                raise ValueError("La date de fin doit être supérieure à la date de début")
+        return self
 
 class TripCreate(TripBase):
     pass
@@ -181,6 +205,14 @@ class TripUpdate(BaseModel):
                 return None
             v = validate_no_sql_injection(v)
         return v
+    
+    @model_validator(mode='after')
+    def validate_dates(self):
+        """Vérifie que la date de fin est après la date de début"""
+        if self.start_date and self.end_date:
+            if self.end_date <= self.start_date:
+                raise ValueError("La date de fin doit être supérieure à la date de début")
+        return self
 
 class Trip(TripBase):
     id: int

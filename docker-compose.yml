@@ -1,24 +1,25 @@
 version: '3.8'
 
 services:
-  # Base de données PostgreSQL
+  # Base de données MySQL
   db:
-    image: postgres:15-alpine
+    image: mysql:8.0
     container_name: weathertrip_db
     environment:
-      POSTGRES_USER: weathertrip_user
-      POSTGRES_PASSWORD: weathertrip_pass
-      POSTGRES_DB: weathertrip_db
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: weathertrip_db
+      MYSQL_USER: weathertrip_user
+      MYSQL_PASSWORD: weathertrip_pass
     ports:
-      - "5432:5432"
+      - "3306:3306"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./docs/init_database.sql:/docker-entrypoint-initdb.d/init.sql
+      - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U weathertrip_user"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
       timeout: 5s
       retries: 5
+    command: --default-authentication-plugin=mysql_native_password
 
   # Backend FastAPI
   backend:
@@ -27,7 +28,7 @@ services:
       dockerfile: Dockerfile
     container_name: weathertrip_backend
     environment:
-      DATABASE_URL: postgresql://weathertrip_user:weathertrip_pass@db:5432/weathertrip_db
+      DATABASE_URL: mysql+pymysql://weathertrip_user:weathertrip_pass@db:3306/weathertrip_db
       OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY}
       SECRET_KEY: ${SECRET_KEY:-super_secret_key_change_in_production}
     ports:
@@ -40,8 +41,23 @@ services:
         condition: service_healthy
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
+  # phpMyAdmin - Interface graphique pour MySQL
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: weathertrip_phpmyadmin
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: weathertrip_user
+      PMA_PASSWORD: weathertrip_pass
+      MYSQL_ROOT_PASSWORD: rootpassword
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+
 volumes:
-  postgres_data:
+  mysql_data:
 
 networks:
   default:
