@@ -7,7 +7,7 @@ import os
 # Charger les variables d'environnement
 load_dotenv()
 
-# Mode test : utiliser SQLite, sinon PostgreSQL
+# Mode test : utiliser SQLite
 if os.getenv("TESTING") == "true":
     SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
     engine = create_engine(
@@ -15,9 +15,16 @@ if os.getenv("TESTING") == "true":
         connect_args={"check_same_thread": False}
     )
 else:
-    SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
+    # ✅ MODIFIÉ : Fallback vers MySQL local si DATABASE_URL n'est pas définie
+    SQLALCHEMY_DATABASE_URL = os.getenv(
+        "DATABASE_URL",
+        "mysql+pymysql://weathertrip_user:weathertrip_pass@localhost:3306/weathertrip_db"
+    )
+    
+    # Vérification
     if not SQLALCHEMY_DATABASE_URL:
-        raise ValueError("DATABASE_URL n'est pas défini dans le fichier .env")
+        raise ValueError("DATABASE_URL n'est pas défini")
+    
     engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
 # Session locale
