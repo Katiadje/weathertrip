@@ -1,271 +1,322 @@
 # 🌍 WeatherTrip
 
-Application web de gestion de voyages intégrant les données météo en temps réel.
+Application web de gestion de voyages avec météo en temps réel et **sécurité renforcée**.
 
 ## 📋 Description
 
-WeatherTrip est une application full-stack permettant de :
-- Gérer ses voyages (création, consultation, modification, suppression)
-- Ajouter des destinations à chaque voyage
-- Consulter la météo actuelle et les prévisions pour chaque destination
-- Visualiser des statistiques sur ses voyages avec Chart.js
-- Authentification simple des utilisateurs
+WeatherTrip permet de :
+- ✈️ Gérer ses voyages (CRUD complet)
+- 📍 Ajouter des destinations à chaque voyage
+- 🌤️ Consulter la météo actuelle et prévisions (cache 1h)
+- 📊 Visualiser des statistiques avec Chart.js
+- 🔐 S'authentifier de manière sécurisée (JWT + Bcrypt)
+
+---
 
 ## 🛠️ Stack Technique
 
-### Backend
-- **Python 3.10+**
-- **FastAPI** - Framework web moderne et performant
-- **SQLAlchemy** - ORM pour la gestion de la base de données
-- **PostgreSQL** - Base de données relationnelle
-- **OpenWeatherMap API** - API météo gratuite
-- **JWT** - Authentification par tokens
+**Backend** : Python 3.10+, FastAPI, SQLAlchemy, PostgreSQL/MySQL, JWT, Bcrypt, SlowAPI  
+**Frontend** : HTML5/CSS3, JavaScript ES6 Modules, Chart.js  
+**Sécurité** : CSRF Protection, Rate Limiting, Brute Force Protection, Security Headers, Input Validation  
+**Tests** : pytest, pytest-asyncio, unittest.mock
 
-### Frontend
-- **HTML5 / CSS3** - Interface responsive
-- **JavaScript Vanilla** - Logique client sans framework
-- **Chart.js** - Visualisation des statistiques
+---
 
-## 📁 Structure du Projet
+## 🔒 Sécurité Implémentée
+
+### Middlewares
+- **Security Headers** : CSP, X-Frame-Options, HSTS, X-Content-Type-Options, etc.
+- **CSRF Protection** : Tokens HMAC SHA-256 avec liaison IP
+- **Rate Limiting** : 200 req/h global, 5 req/min sur login/register
+- **Brute Force** : 5 tentatives max, blocage 15 min
+
+### Validation Multi-Niveaux
+- **Pydantic** : Validation stricte des inputs (regex, length, format)
+- **SQL Injection** : Détection patterns malveillants + contraintes DB
+- **Database** : CHECK constraints sur tous les champs critiques
+
+### Authentification
+- **JWT** : Tokens avec expiration (30 min)
+- **Bcrypt** : Hash adaptatif des mots de passe
+- **Authorization** : Isolation des données par utilisateur (user_id)
+
+### Règles de Validation
+- Username : 3-50 chars, alphanumérique + `_-`
+- Email : Format EmailStr validé
+- Password : 8+ chars, 1 majuscule, 1 minuscule, 1 chiffre
+- Villes/Pays : Lettres, espaces, tirets, apostrophes uniquement
+
+---
+
+## 📁 Structure
 
 ```
 weathertrip/
 ├── backend/
 │   ├── app/
-│   │   ├── database/
-│   │   │   └── database.py           # Configuration DB
-│   │   ├── models/
-│   │   │   ├── models.py             # Modèles SQLAlchemy
-│   │   │   └── schemas.py            # Schémas Pydantic
-│   │   ├── routes/
-│   │   │   ├── users.py              # Routes utilisateurs
-│   │   │   ├── trips.py              # Routes voyages
-│   │   │   ├── destinations.py       # Routes destinations
-│   │   │   └── weather.py            # Routes météo
-│   │   ├── services/
-│   │   │   ├── auth_service.py       # Service d'authentification
-│   │   │   └── weather_service.py    # Service météo
-│   │   └── main.py                   # Application principale
-│   ├── requirements.txt              # Dépendances Python
-│   └── .env.example                  # Variables d'environnement
-├── frontend/
-│   ├── static/
-│   │   ├── css/
-│   │   │   └── style.css             # Styles CSS
-│   │   └── js/
-│   │       └── app.js                # Logique JavaScript
-│   └── templates/
-│       └── index.html                # Page principale
-├── docs/
-│   ├── database_schema_dbdiagram.txt # Schéma pour dbdiagram.io
-│   └── database_schema_mocodo.txt    # Schéma pour Mocodo
-└── README.md
+│   │   ├── database/          # Configuration SQLAlchemy
+│   │   ├── models/            # ORM + Pydantic schemas
+│   │   ├── routes/            # API endpoints
+│   │   ├── services/          # Business logic (auth, weather)
+│   │   ├── middleware/        # Security (CSRF, headers, rate limit, brute force)
+│   │   └── main.py
+│   ├── tests/                 # pytest tests
+│   ├── requirements.txt
+│   └── .env.example
+└── frontend/
+    ├── static/
+    │   ├── css/style.css
+    │   └── js/               # ES6 modules (auth, trips, weather, etc.)
+    └── templates/index.html
 ```
+
+---
 
 ## 🚀 Installation
 
-### Prérequis
-- Python 3.10 ou supérieur
-- PostgreSQL 12 ou supérieur
-- Clé API OpenWeatherMap (gratuite)
+### 1. Prérequis
+- Python 3.10+
+- PostgreSQL 12+ ou MySQL 8+
+- Clé API OpenWeatherMap (gratuite sur https://openweathermap.org/api)
 
-### 1. Cloner le projet
+### 2. Setup
+
 ```bash
+# Clone
 git clone <url-du-repo>
 cd weathertrip
-```
 
-### 2. Configurer la base de données
+# Base de données
+createdb weathertrip_db  # PostgreSQL
+# OU
+mysql -u root -p -e "CREATE DATABASE weathertrip_db;"
 
-#### Avec PostgreSQL
-```bash
-# Créer la base de données
-createdb weathertrip_db
-
-# Ou avec psql
-psql -U postgres
-CREATE DATABASE weathertrip_db;
-```
-
-### 3. Backend
-
-```bash
+# Backend
 cd backend
-
-# Créer un environnement virtuel
 python -m venv venv
-
-# Activer l'environnement virtuel
-# Sur Windows:
-venv\Scripts\activate
-# Sur Linux/Mac:
-source venv/bin/activate
-
-# Installer les dépendances
+source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-# Configurer les variables d'environnement
+# Configuration .env
 cp .env.example .env
-# Éditer le fichier .env avec vos paramètres
+# Éditer .env avec vos paramètres
 ```
 
-### 4. Configuration de l'API Météo
+### 3. Configuration `.env`
 
-1. Créer un compte gratuit sur https://openweathermap.org/api
-2. Obtenir votre clé API
-3. Ajouter la clé dans le fichier `.env` :
-```
-OPENWEATHER_API_KEY=votre_cle_api_ici
+```env
+DATABASE_URL=postgresql://user:password@localhost:5432/weathertrip_db
+SECRET_KEY=<générer-avec-secrets.token_urlsafe(32)>
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+OPENWEATHER_API_KEY=<votre-clé-api>
+ENVIRONMENT=development
 ```
 
-### 5. Lancer l'application
+**Générer SECRET_KEY** :
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+### 4. Initialiser DB
 
 ```bash
-# Depuis le dossier backend/
+python -c "from app.database.database import engine; from app.models.models import Base; Base.metadata.create_all(bind=engine)"
+```
+
+### 5. Lancer
+
+```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-L'application sera accessible sur : http://localhost:8000
+**Accès** : http://localhost:8000  
+**Docs API** : http://localhost:8000/docs
 
-## 📊 Schémas de Base de Données
-
-### Pour dbdiagram.io
-Copier le contenu de `docs/database_schema_dbdiagram.txt` sur https://dbdiagram.io/
-
-### Pour Mocodo
-Copier le contenu de `docs/database_schema_mocodo.txt` dans Mocodo en ligne ou local.
-
-## 🎯 Utilisation
-
-### 1. Inscription / Connexion
-- S'inscrire avec un nom d'utilisateur, email et mot de passe
-- Se connecter avec ses identifiants
-
-### 2. Créer un voyage
-- Renseigner le nom du voyage
-- Ajouter des dates (optionnel)
-- Ajouter une description (optionnel)
-
-### 3. Ajouter des destinations
-- Cliquer sur "+ Destination" sur un voyage
-- Renseigner la ville et le pays
-- Ajouter des dates d'arrivée et de départ (optionnel)
-
-### 4. Consulter la météo
-- Cliquer sur l'icône météo 🌤️ pour une destination
-- Ou voir la météo de toutes les destinations d'un voyage
-
-### 5. Visualiser les statistiques
-- Un graphique Chart.js affiche le nombre de destinations par voyage
-
-## 🔧 Fonctionnalités
-
-### Obligatoires ✅
-- [x] Backend Python avec FastAPI
-- [x] Base de données PostgreSQL
-- [x] Frontend web HTML/CSS/JS
-- [x] Gestion des utilisateurs
-- [x] CRUD voyages
-- [x] CRUD destinations
-- [x] Intégration API météo OpenWeatherMap
-- [x] Affichage de la météo
-- [x] Stockage en base de données
-- [x] Graphiques avec Chart.js
-
-### Bonus (Optionnels) 🎁
-- [x] Cache des données météo
-- [x] Prévisions météo
-- [ ] Export PDF du voyage
-- [ ] Carte interactive des destinations
-- [ ] Recommandation de dates selon la météo
+---
 
 ## 📡 API Endpoints
 
-### Utilisateurs
-- `POST /users/register` - Inscription
-- `POST /users/login` - Connexion
-- `GET /users/me` - Profil utilisateur
+### Authentification
+- `POST /users/register` - Inscription (rate limit: 5/min)
+- `POST /users/login` - Connexion JWT (rate limit: 5/min + brute force)
+- `GET /users/me` - Profil utilisateur (auth requise)
 
-### Voyages
-- `POST /trips/` - Créer un voyage
-- `GET /trips/` - Liste des voyages
-- `GET /trips/{id}` - Détail d'un voyage
-- `PUT /trips/{id}` - Modifier un voyage
-- `DELETE /trips/{id}` - Supprimer un voyage
+### Voyages (Auth JWT requise)
+- `POST /trips/` - Créer voyage
+- `GET /trips/` - Liste voyages (pagination)
+- `GET /trips/{id}` - Détail voyage
+- `PUT /trips/{id}` - Modifier voyage
+- `DELETE /trips/{id}` - Supprimer voyage
 
-### Destinations
-- `POST /destinations/` - Ajouter une destination
+### Destinations (Auth JWT requise)
+- `POST /destinations/` - Ajouter destination
 - `GET /destinations/trip/{trip_id}` - Destinations d'un voyage
-- `GET /destinations/{id}` - Détail d'une destination
-- `PUT /destinations/{id}` - Modifier une destination
-- `DELETE /destinations/{id}` - Supprimer une destination
+- `GET /destinations/{id}` - Détail destination
+- `PUT /destinations/{id}` - Modifier
+- `DELETE /destinations/{id}` - Supprimer
 
 ### Météo
-- `GET /weather/destination/{id}` - Météo d'une destination
-- `POST /weather/destination/{id}/forecast` - Récupérer les prévisions
-- `GET /weather/trip/{id}` - Météo de toutes les destinations
-- `GET /weather/city/{city}` - Rechercher la météo d'une ville
+- `GET /weather/destination/{id}` - Météo destination (cache 1h)
+- `POST /weather/destination/{id}/forecast` - Récupérer prévisions
+- `GET /weather/trip/{id}` - Météo toutes destinations
+- `GET /weather/city/{city}` - Rechercher météo ville
+
+**Exemple** :
+```bash
+# Register
+curl -X POST "http://localhost:8000/users/register" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"alice","email":"alice@example.com","password":"SecurePass123"}'
+
+# Login
+curl -X POST "http://localhost:8000/users/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"alice","password":"SecurePass123"}'
+
+# Create Trip (avec token)
+curl -X POST "http://localhost:8000/trips/" \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Vacances été","description":"Tour de France"}'
+```
+
+---
 
 ## 🧪 Tests
 
 ```bash
-# Installer pytest (déjà dans requirements.txt)
-pip install pytest pytest-asyncio
+# Installation
+pip install pytest pytest-asyncio httpx
 
-# Lancer les tests
+# Lancer tous les tests
 pytest
+
+# Avec verbose
+pytest -v
+
+# Avec coverage
+pytest --cov=app --cov-report=html
 ```
 
-## 📝 Notes Importantes
-
-⚠️ **API Météo Gratuite**
-- Limité à 60 appels/minute
-- Données mises en cache pour 1 heure
-- Prévisions sur 5 jours (par tranche de 3h)
-
-⚠️ **Production**
-- Changer `SECRET_KEY` dans `auth_service.py`
-- Configurer CORS correctement dans `main.py`
-- Utiliser HTTPS
-- Sécuriser les variables d'environnement
-
-## 🤝 Contribution
-
-Ce projet a été réalisé dans le cadre du projet M2-web.
-
-### Répartition des tâches (suggérée)
-- **Étudiant 1** : Backend Python, API météo, Base de données
-- **Étudiant 2** : Frontend web, Intégration données météo, UX/UI
-
-## 📄 Livrables
-
-- [x] Code source du projet
-- [x] Application fonctionnelle
-- [x] Base de données configurée
-- [x] Documentation d'installation et d'utilisation
-- [ ] Démonstration finale
-
-## 🎓 Critères d'Évaluation
-
-| Critère | Pondération |
-|---------|-------------|
-| Back-end Python | 30 % |
-| Base de données | 20 % |
-| Front-end | 20 % |
-| Intégration API météo | 15 % |
-| Qualité du code & documentation | 15 % |
-
-## 📚 Ressources
-
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [SQLAlchemy Documentation](https://docs.sqlalchemy.org/)
-- [OpenWeatherMap API](https://openweathermap.org/api)
-- [Chart.js Documentation](https://www.chartjs.org/docs/)
-
-## 📧 Support
-
-Pour toute question, consulter la documentation ou contacter l'équipe projet.
+**Tests disponibles** :
+- `test_users_routes.py` - API utilisateurs
+- `test_trips_routes.py` - API voyages
+- `test_destinations_routes.py` - API destinations
+- `test_weather_routes.py` - API météo (avec mocking)
+- `test_auth_service.py` - Service authentification
+- `test_weather_service.py` - Service météo
 
 ---
 
-Fait avec ❤️ pour le projet M2-web
+## 🎯 Utilisation
+
+1. **S'inscrire** : Username (3-50 chars), Email valide, Password (8+ chars, 1 maj, 1 min, 1 chiffre)
+2. **Se connecter** : Récupérer token JWT valide 30 min
+3. **Créer voyage** : Nom (obligatoire), dates (optionnel), description (optionnel)
+4. **Ajouter destinations** : Ville, pays (lettres uniquement), dates (optionnel)
+5. **Consulter météo** : Cliquer icône 🌤️ sur destination
+6. **Voir stats** : Graphique Chart.js automatique
+
+---
+
+## ⚠️ Notes Importantes
+
+### API Météo
+- **Limite** : 60 appels/minute (gratuit)
+- **Cache** : Données mise en cache 1 heure
+- **Prévisions** : 5 jours par tranches de 3h
+
+### Production Checklist
+- [ ] Générer SECRET_KEY forte (32+ chars)
+- [ ] ENVIRONMENT=production
+- [ ] Activer HTTPS (obligatoire)
+- [ ] Configurer CORS (origins spécifiques)
+- [ ] Utiliser Redis pour rate limiting
+- [ ] Activer logs et monitoring
+- [ ] Sauvegardes DB automatiques
+- [ ] Configurer firewall
+
+**CORS Production** (main.py) :
+```python
+origins = ["https://votre-domaine.com"]  # Pas ["*"] !
+```
+
+**Redis Rate Limiting** :
+```python
+storage_uri="redis://localhost:6379"  # Au lieu de memory://
+```
+
+---
+
+## 🏆 Fonctionnalités
+
+### Obligatoires ✅
+- [x] Backend Python FastAPI
+- [x] Base de données PostgreSQL/MySQL
+- [x] Frontend HTML/CSS/JS
+- [x] Authentification JWT
+- [x] CRUD voyages + destinations
+- [x] API météo OpenWeatherMap
+- [x] Cache météo 1h
+- [x] Graphiques Chart.js
+
+### Sécurité ✅
+- [x] JWT + Bcrypt
+- [x] Brute Force Protection (5/15min)
+- [x] Rate Limiting (200/h)
+- [x] Security Headers (CSP, HSTS, etc.)
+- [x] CSRF Protection
+- [x] Input Validation (Pydantic + Regex)
+- [x] SQL Injection Prevention
+- [x] Authorization par user
+
+### Bonus ✅
+- [x] Tests pytest
+- [x] Architecture modulaire ES6
+- [x] Prévisions météo 5 jours
+- [x] Contraintes DB
+- [x] Documentation API auto
+- [x] Normalisation codes pays
+
+---
+
+## 🐛 Dépannage
+
+**"SECRET_KEY non défini"** :
+```bash
+python -c "import secrets; print('SECRET_KEY=' + secrets.token_urlsafe(32))" >> .env
+```
+
+**Erreur DB** :
+```bash
+# Vérifier DB existe
+psql -l | grep weathertrip_db
+
+# Vérifier .env
+cat .env | grep DATABASE_URL
+```
+
+**IP bloquée (brute force)** : Attendre 15 min ou redémarrer app
+
+**Rate limit exceeded** : Attendre expiration ou redémarrer app
+
+---
+
+## 📚 Ressources
+
+- [FastAPI Docs](https://fastapi.tiangolo.com/)
+- [SQLAlchemy](https://docs.sqlalchemy.org/)
+- [OpenWeatherMap API](https://openweathermap.org/api)
+- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
+- [Chart.js](https://www.chartjs.org/docs/)
+
+---
+
+## 📄 License
+
+MIT License - Projet M2-web
+
+---
+
+**Fait avec ❤️ et 🔒**
