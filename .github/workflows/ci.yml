@@ -70,6 +70,6 @@ jobs:
       - name: Frontend sanity check
         run: |
           test -f frontend/templates/index.html
-          test -f frontend/static/js/app.js
+          test -f frontend/static/js/main.js
           test -f frontend/static/css/style.css
           echo "Frontend files present ✅"
